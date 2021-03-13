@@ -18,8 +18,8 @@ class TestAggregation(test.TestCase):
             team = Team(name=f"Team {(i + 1)}")
             await team.save()
             participants.append(team)
-        await event.participants.add(participants[0], participants[1])
-        await event.participants.add(participants[0], participants[1])
+        await event.participants.add(participants[0], participants[1])  # pylint: disable=E1101
+        await event.participants.add(participants[0], participants[1])  # pylint: disable=E1101
 
         tournaments_with_count = (
             await Tournament.all()

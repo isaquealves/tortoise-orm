@@ -1,3 +1,4 @@
+# pylint: disable=E1101,E1133,E1136
 from tests.testmodels import (
     Address,
     Author,
