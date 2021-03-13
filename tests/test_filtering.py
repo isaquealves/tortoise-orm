@@ -30,7 +30,7 @@ class TestFiltering(test.TestCase):
         await team_second.save()
 
         await team_first.events.add(event_first)
-        await event_second.participants.add(team_second)
+        await event_second.participants.add(team_second)  # pylint: disable=E1101
 
         found_events = (
             await Event.filter(Q(pk__in=[event_first.pk, event_second.pk]) | Q(name="3"))

@@ -54,8 +54,8 @@ async def run():
         team = Team(name=f"Team {(i + 1)}")
         await team.save()
         participants.append(team)
-    await event.participants.add(participants[0], participants[1])
-    await event.participants.add(participants[0], participants[1])
+    await event.participants.add(participants[0], participants[1])  # pylint: disable=E1101
+    await event.participants.add(participants[0], participants[1])  # pylint: disable=E1101
 
     print(await Tournament.all().annotate(events_count=Count("events")).filter(events_count__gte=1))
     print(

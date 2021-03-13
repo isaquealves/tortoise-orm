@@ -86,7 +86,7 @@ class TestManyToManyField(test.TestCase):
         with self.assertRaisesRegex(
             OperationalError, r"You should first call .save\(\) on <M2MOne>"
         ):
-            await one.two.add(two)
+            await one.two.add(two)  # pylint: disable=E1101
 
     async def test__add_uninstantiated(self):
         one = testmodels.M2MOne(name="One")

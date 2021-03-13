@@ -1,3 +1,4 @@
+# pylint: disable=E1101,E1133
 """
 This example shows how relations between models work.
 

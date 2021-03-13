@@ -1,3 +1,4 @@
+# pylint: disable=E1133
 """
 This example shows how self-referential (recursive) relations work.
 
