@@ -17,6 +17,7 @@ Changelog
 - Add `nowait`, `skip_locked`, `of` parameters to `queryset.select_for_update`.
 - Add field name to validation exceptions.
 - Compatible with `asyncmy <https://github.com/long2ice/asyncmy>`_.
+- Fix duplicates when using custom through association class on M2M relations
 
 0.16
 ====
