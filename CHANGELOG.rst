@@ -20,7 +20,6 @@ Changelog
 - Replace pypika to `pypika-tortoise <https://github.com/tortoise/pypika-tortoise>`_.
 - Fix duplicates when using custom through association class on M2M relations
 
-
 0.16
 ====
 0.16.21
