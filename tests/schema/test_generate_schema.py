@@ -741,8 +741,19 @@ CREATE TABLE `team_team` (
     `team_id` VARCHAR(50) NOT NULL,
     FOREIGN KEY (`team_rel_id`) REFERENCES `team` (`name`) ON DELETE CASCADE,
     FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE CASCADE
-) CHARACTER SET utf8mb4;""".strip(),
-        )
+) CHARACTER SET utf8mb4;""".strip(),)
+    async def test_index(self):
+        await self.init_for("tests.schema.models_mysql_index")
+        sql = get_schema_sql(Tortoise.get_connection("default"), safe=True)
+        self.assertEqual(
+            sql,
+            """CREATE TABLE IF NOT EXISTS `index` (
+    `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `full_text` LONGTEXT NOT NULL,
+    `geometry` GEOMETRY NOT NULL
+) CHARACTER SET utf8mb4;
+CREATE FULLTEXT INDEX `idx_index_full_te_3caba4` ON `index` (`full_text`) WITH PARSER ngram;
+CREATE SPATIAL INDEX `idx_index_geometr_0b4dfb` ON `index` (`geometry`);""",)
 
 
 class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
@@ -1093,5 +1104,24 @@ COMMENT ON TABLE "teamevents" IS 'How participants relate';
 CREATE TABLE "team_team" (
     "team_rel_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE,
     "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE
-);""".strip(),
-        )
+);""".strip(),)
+    async def test_index(self):
+        await self.init_for("tests.schema.models_postgres_index")
+        sql = get_schema_sql(Tortoise.get_connection("default"), safe=True)
+        self.assertEqual(
+            sql,
+            """CREATE TABLE IF NOT EXISTS "index" (
+    "id" SERIAL NOT NULL PRIMARY KEY,
+    "bloom" VARCHAR(200) NOT NULL,
+    "brin" VARCHAR(200) NOT NULL,
+    "gin" TSVECTOR NOT NULL,
+    "gist" TSVECTOR NOT NULL,
+    "sp_gist" VARCHAR(200) NOT NULL,
+    "hash" VARCHAR(200) NOT NULL
+);
+CREATE INDEX "idx_index_bloom_280137" ON "index" USING BLOOM ("bloom");
+CREATE INDEX "idx_index_brin_a54a00" ON "index" USING BRIN ("brin");
+CREATE INDEX "idx_index_gin_a403ee" ON "index" USING GIN ("gin");
+CREATE INDEX "idx_index_gist_c807bf" ON "index" USING GIST ("gist");
+CREATE INDEX "idx_index_sp_gist_2c0bad" ON "index" USING SPGIST ("sp_gist");
+CREATE INDEX "idx_index_hash_cfe6b5" ON "index" USING HASH ("hash");""",)

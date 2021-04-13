@@ -475,7 +475,7 @@ class Tortoise:
         config_file: Optional[str] = None,
         _create_db: bool = False,
         db_url: Optional[str] = None,
-        modules: Optional[Dict[str, List[str]]] = None,
+        modules: Optional[Dict[str, Iterable[Union[str, ModuleType]]]] = None,
         use_tz: bool = False,
         timezone: str = "UTC",
         routers: Optional[List[Union[str, Type]]] = None,
@@ -708,4 +708,4 @@ def run_async(coro: Coroutine) -> None:
         loop.run_until_complete(Tortoise.close_connections())
 
 
-__version__ = "0.17.0"
+__version__ = "0.17.2"

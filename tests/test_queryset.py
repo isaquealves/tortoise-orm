@@ -230,6 +230,18 @@ class TestQueryset(test.TestCase):
         #     [10, 13, 16, 19, 22, 25, 28, 31, 34, 37]
         # )
 
+    @test.requireCapability(support_update_limit_order_by=True)
+    async def test_delete_limit(self):
+        await IntFields.all().limit(1).delete()
+        self.assertEqual(await IntFields.all().count(), 29)
+
+    @test.requireCapability(support_update_limit_order_by=True)
+    async def test_delete_limit_order_by(self):
+        await IntFields.all().limit(1).order_by("-id").delete()
+        self.assertEqual(await IntFields.all().count(), 29)
+        with self.assertRaises(DoesNotExist):
+            await IntFields.get(intnum=97)
+
     async def test_async_iter(self):
         counter = 0
         async for _ in IntFields.all():
@@ -330,6 +342,22 @@ class TestQueryset(test.TestCase):
         sql = IntFields.all().sql()
         self.assertRegex(sql, r"^SELECT.+FROM.+")
 
+    @test.requireCapability(support_index_hint=True)
+    async def test_force_index(self):
+        sql = IntFields.filter(pk=1).only("id").force_index("index_name").sql()
+        self.assertEqual(
+            sql,
+            "SELECT `id` `id` FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=1",
+        )
+
+    @test.requireCapability(support_index_hint=True)
+    async def test_use_index(self):
+        sql = IntFields.filter(pk=1).only("id").use_index("index_name").sql()
+        self.assertEqual(
+            sql,
+            "SELECT `id` `id` FROM `intfields` USE INDEX (`index_name`) WHERE `id`=1",
+        )
+
     @test.requireCapability(support_for_update=True)
     async def test_select_for_update(self):
         sql1 = IntFields.filter(pk=1).only("id").select_for_update().sql()
@@ -390,3 +418,10 @@ class TestQueryset(test.TestCase):
         self.assertEqual(tree.parent.name, parent_node.name)
         self.assertEqual(tree.child.pk, child_node.pk)
         self.assertEqual(tree.child.name, child_node.name)
+
+    @test.requireCapability(dialect="postgres")
+    async def test_postgres_search(self):
+        name = "hello world"
+        await Tournament.create(name=name)
+        ret = await Tournament.filter(name__search="hello").first()
+        self.assertEqual(ret.name, name)

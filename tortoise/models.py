@@ -30,7 +30,6 @@ from tortoise.exceptions import (
     IntegrityError,
     OperationalError,
     ParamsError,
-    TransactionManagementError,
 )
 from tortoise.fields.base import Field
 from tortoise.fields.data import IntField
@@ -46,6 +45,7 @@ from tortoise.fields.relational import (
 )
 from tortoise.filters import get_filters_for_field
 from tortoise.functions import Function
+from tortoise.indexes import Index
 from tortoise.manager import Manager
 from tortoise.queryset import ExistsQuery, Q, QuerySet, QuerySetSingle
 from tortoise.router import router
@@ -735,6 +735,10 @@ class Model(metaclass=ModelMeta):
             raise TypeError("Model instances without id are unhashable")
         return hash(self.pk)
 
+    def __iter__(self):
+        for field in self._meta.fields_map:
+            yield field, getattr(self, field)
+
     def __eq__(self, other: object) -> bool:
         return type(other) is type(self) and self.pk == other.pk  # type: ignore
 
@@ -887,7 +891,7 @@ class Model(metaclass=ModelMeta):
         :param force_create: Forces creation of the record
         :param force_update: Forces updating of the record
 
-        :raises IncompleteInstanceError: If the model is partial and the fields are not available for persistance.
+        :raises IncompleteInstanceError: If the model is partial and the fields are not available for persistence.
         :raises IntegrityError: If the model can't be created or updated (specifically if force_create or force_update has been set)
         """
         db = using_db or self._choose_db(True)
@@ -1013,6 +1017,7 @@ class Model(metaclass=ModelMeta):
         :param defaults: Default values to be added to a created instance if it can't be fetched.
         :param using_db: Specific DB connection to use instead of default bound
         :param kwargs: Query parameters.
+        :raises IntegrityError: If create failed
         """
         if not defaults:
             defaults = {}
@@ -1023,11 +1028,24 @@ class Model(metaclass=ModelMeta):
                 return instance, False
             try:
                 return await cls.create(**defaults, **kwargs, using_db=using_db), True
-            except (IntegrityError, TransactionManagementError):
-                # Let transaction close
-                pass
-        # Try after transaction in case transaction error
-        return await cls.get(**kwargs), False
+            except IntegrityError:
+                try:
+                    return await cls.get(**kwargs), False
+                except DoesNotExist:
+                    pass
+                raise
+
+    @classmethod
+    def select_for_update(
+        cls, nowait: bool = False, skip_locked: bool = False, of: Tuple[str, ...] = ()
+    ) -> QuerySet[MODEL]:
+        """
+        Make QuerySet select for update.
+
+        Returns a queryset that will lock rows until the end of the transaction,
+        generating a SELECT ... FOR UPDATE SQL statement on supported databases.
+        """
+        return cls._meta.manager.get_queryset().select_for_update(nowait, skip_locked, of)
 
     @classmethod
     async def update_or_create(
@@ -1047,17 +1065,11 @@ class Model(metaclass=ModelMeta):
             defaults = {}
         db = using_db or cls._choose_db(True)
         async with in_transaction(connection_name=db.connection_name):
-            instance = await cls.filter(**kwargs).first()
+            instance = await cls.select_for_update().get_or_none(**kwargs)
             if instance:
-                await instance.update_from_dict(defaults).save()
+                await instance.update_from_dict(defaults).save(using_db=db)  # type:ignore
                 return instance, False
-            try:
-                return await cls.create(**defaults, **kwargs, using_db=using_db), True
-            except (IntegrityError, TransactionManagementError):
-                # Let transaction close
-                pass
-        # Try after transaction in case transaction error
-        return await cls.get(**kwargs), False
+        return await cls.get_or_create(defaults, db, **kwargs)
 
     @classmethod
     async def create(cls: Type[MODEL], **kwargs: Any) -> MODEL:
@@ -1243,12 +1255,14 @@ class Model(metaclass=ModelMeta):
         if not isinstance(_together, (tuple, list)):
             raise ConfigurationError(f"'{cls.__name__}.{together}' must be a list or tuple.")
 
-        if any(not isinstance(unique_fields, (tuple, list)) for unique_fields in _together):
+        if any(not isinstance(unique_fields, (tuple, list, Index)) for unique_fields in _together):
             raise ConfigurationError(
                 f"All '{cls.__name__}.{together}' elements must be lists or tuples."
             )
 
         for fields_tuple in _together:
+            if isinstance(fields_tuple, Index):
+                fields_tuple = fields_tuple.fields
             for field_name in fields_tuple:
                 field = cls._meta.fields_map.get(field_name)
 

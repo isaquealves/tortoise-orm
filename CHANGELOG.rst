@@ -9,6 +9,24 @@ Changelog
 
 0.17
 ====
+0.17.2
+------
+- Add more `index` types.
+- Add `force_index`, `use_index` to `queryset`.
+- Fix `F` in update error with `update_fields`.
+- Make `delete` query work with `limit` and `order_by`. (#697)
+- Filter backward FK fields with `IS NULL` and `NOT IS NULL` filters (#700)
+- Add `select_for_update` in `update_or_create`. (#702)
+- Add `Model.select_for_update`.
+- Add `__search` full text search to queryset.
+
+0.17.1
+------
+- Fix type for modules.
+- Fix `select_related` when related model specified more than once. (#679)
+- Add `__iter__` to model, now can just return model/models in `fastapi` response.
+- Fix `in_transaction` bug caused by 'router'. (#677) (#678)
+
 0.17.0
 -------
 - Add date part extract filtering.
